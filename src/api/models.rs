@@ -9,3 +9,8 @@ pub struct SaveBody {
 pub struct SavedKey {
     pub key: Option<String>
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct LoadedData {
+    pub data: Option<String>
+}
