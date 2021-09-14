@@ -36,6 +36,10 @@ impl<A: StorageAdapter + ?Sized> Storage<A> {
             }
         }
     }
+
+    pub fn get(&mut self, key: &String) -> Option<String> {
+        self.adapter.get(key)
+    }
 }
 
 #[cfg(test)]
