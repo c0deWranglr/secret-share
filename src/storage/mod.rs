@@ -18,6 +18,10 @@ impl<A: StorageAdapter> Storage<A> {
 
 impl<A: StorageAdapter + ?Sized> Storage<A> {
     pub fn save(&mut self, value: String) -> Option<String> {
+        self.save_and_expire(value, adapters::KeyExpiration::Never)
+    }
+
+    pub fn save_and_expire(&mut self, value: String, expiration: adapters::KeyExpiration) -> Option<String> {
         let mut bytes = [0u8; 256];
         OsRng.fill_bytes(&mut bytes);
         let long_key = encode(bytes, URL_SAFE_NO_PAD);
@@ -31,7 +35,7 @@ impl<A: StorageAdapter + ?Sized> Storage<A> {
             if let Some(_) = self.adapter.get(&key) {
                 len += 1;
             } else {
-                self.adapter.set(&key, value);
+                self.adapter.set(&key, value, expiration);
                 return Some(key);
             }
         }
@@ -53,7 +57,7 @@ mod tests {
 
     impl StorageAdapter for MockAdapter {
         fn get(&mut self, _: &str) -> std::option::Option<std::string::String> { self.ret.remove(0) }
-        fn set(&mut self, key: &str, value: std::string::String) { self.saves.push((key.to_owned(), value)) }
+        fn set(&mut self, key: &str, value: std::string::String, _: adapters::KeyExpiration) { self.saves.push((key.to_owned(), value)) }
     }
 
     #[test]

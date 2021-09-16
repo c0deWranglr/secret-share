@@ -1,16 +1,22 @@
 use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct SaveBody {
     pub value: String
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
+pub struct SaveQuery {
+    pub ttl_min: Option<u64>,
+    pub attempts: Option<u32>
+}
+
+#[derive(Serialize)]
 pub struct SavedKey {
     pub key: Option<String>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct LoadedData {
     pub data: Option<String>
 }
