@@ -44,6 +44,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(actix_cors::Cors::permissive())
             .app_data(storage.clone())
             .service(web::scope("/api").configure(api::configure))
             .service(index)
