@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { storeSecret } from '../lib/client';
 import { encrypt } from '../lib/cryptography';
 
@@ -23,7 +24,7 @@ class SaveSecret extends React.Component {
 
     handleSubmit(event) {
         this.setState( { error: null });
-        
+
         let data = encrypt(this.state.token, this.state.password);
         storeSecret(data).then(key => {
             if (key !== undefined) {
@@ -48,13 +49,14 @@ class SaveSecret extends React.Component {
                         <input name="password" type="password" onChange={this.handleChange} />
                         <br/>
                         <label>Redemption Token:</label>
-                        <input name="token" type="text" onChange={this.handleChange} />
+                        <input name="token" type="password" onChange={this.handleChange} />
                         <br/>
                         <input type="submit" value="Submit" />
                     </form>
                 </div>
                 <div hidden={!this.state.submitted}>
-                    <label>Redemption Key: {this.state.redemptionKey}</label>
+                    <label>Redemption Key: </label>
+                    <Link to={"/view?key="+this.state.redemptionKey}>{this.state.redemptionKey}</Link>
                     <br/>
                     <button onClick={this.componentDidMount}>Save Another</button>
                 </div>

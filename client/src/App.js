@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Link, Route, Switch } from 'react-router-dom';
 import './App.css';
 import SaveSecret from './components/SaveSecret';
+import ViewSecret from './components/ViewSecret';
 
 function App() {
   return (
@@ -9,13 +10,15 @@ function App() {
       <header className="App-header">
         <BrowserRouter>
           <nav>
-            <ul>
-              <li><Link to="/save">Save</Link></li>
-            </ul>
+            <Link to="/save">Save</Link>
+            <br/>
+            <Link to="/view">View</Link>
           </nav>
           <Switch>
             <Route path="/save">
               <SaveSecret/>
+            </Route>
+            <Route path="/view" render={(props) => { return <ViewSecret {...props} /> }}>
             </Route>
           </Switch>
         </BrowserRouter>
