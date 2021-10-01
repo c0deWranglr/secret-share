@@ -1,29 +1,35 @@
 import React from 'react';
-import { BrowserRouter, Link, Route, Switch } from 'react-router-dom';
-import './App.css';
+import { BrowserRouter, Route, Switch } from 'react-router-dom';
+import { LinkContainer } from 'react-router-bootstrap';
+import { Container, Navbar, Nav } from 'react-bootstrap';
 import SaveSecret from './components/SaveSecret';
 import ViewSecret from './components/ViewSecret';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <BrowserRouter>
-          <nav>
-            <Link to="/save">Save</Link>
-            <br/>
-            <Link to="/view">View</Link>
-          </nav>
-          <Switch>
-            <Route path="/save">
-              <SaveSecret/>
-            </Route>
-            <Route path="/view" render={(props) => { return <ViewSecret {...props} /> }}>
-            </Route>
-          </Switch>
-        </BrowserRouter>
-      </header>
-    </div> 
+    <>
+    <BrowserRouter>
+      <Navbar bg="light" expand="lg">
+        <Container>
+          <Navbar.Brand href="/">Secret-Share</Navbar.Brand>
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="me-auto">
+              <LinkContainer to="/save"><Nav.Link>Save</Nav.Link></LinkContainer>
+              <LinkContainer to="/view"><Nav.Link>View</Nav.Link></LinkContainer>
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+        <Switch>
+          <Route path="/save">
+            <SaveSecret/>
+          </Route>
+          <Route path="/view" render={(props) => { return <ViewSecret {...props} /> }}>
+          </Route>
+        </Switch>
+    </BrowserRouter>
+    </> 
   );
 }
 
