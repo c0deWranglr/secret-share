@@ -68,7 +68,7 @@ class SaveSecret extends React.Component {
                                 The password (or secret) to share.
                             </Form.Text>
                         </FloatingLabel>
-                        <FloatingLabel className="mb-3" label="Redepmtion Token">
+                        <FloatingLabel className="mb-3" label="Redemption Token">
                             <Form.Control required name="token" type="password" placeholder="" onChange={this.handleChange} value={this.state.token} />
                             <Form.Text>
                                 A token or passphrase used to allow viewing the password.
