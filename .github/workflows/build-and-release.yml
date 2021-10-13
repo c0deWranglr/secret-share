@@ -1,0 +1,47 @@
+name: Build And Release
+on: [push]
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  build-server:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Test
+      run: cargo test --verbose --path server
+    - name: Build
+      run: cargo build --verbose --release --path server
+    - name: Archive
+      uses: actions/upload-artifact@v2
+      with:
+        name: server-build
+        path: server/target/release/secret-share
+  build-client:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: npm run build --prefix client
+    - name: Archive
+      uses: actions/upload-artifact@v2
+      with:
+        name: client-build
+        path: client/build
+  release:
+    needs: [build-server, build-client]
+    runs-on: ubuntu-latest
+    - name: Download Server
+      uses: actions/download-artifacts@v2
+      with:
+        name: server-build
+        path: server/target/release
+    - name: Download Client
+      uses: actions/download-artifacts@v2
+      with:
+        name: client-build
+        path: client
+    - name: Docker
+      uses: docker/build-push-action@v2
+      with:
+        push: false
+        tags: secret-share:$GITHUB_REF
