@@ -21,7 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: cd client && npm run build
+      run: cd client && npm install && npm run build
     - name: Archive
       uses: actions/upload-artifact@v2
       with:
