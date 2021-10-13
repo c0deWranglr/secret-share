@@ -30,6 +30,7 @@ jobs:
   release:
     needs: [build-server, build-client]
     runs-on: ubuntu-latest
+    steps:
     - name: Download Server
       uses: actions/download-artifacts@v2
       with:
