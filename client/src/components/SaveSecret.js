@@ -86,8 +86,8 @@ class SaveSecret extends React.Component {
                             </FloatingLabel>
                             </Col>
                             <Col>
-                                <Form.Check required label="TTL" name="expirationType" type="radio" id="ttl" onChange={this.handleChange} checked={this.state.expirationType == "ttl"} />
-                                <Form.Check required label="Attempts" name="expirationType" type="radio" id="attempts" onChange={this.handleChange} checked={this.state.expirationType == "attempts"} />
+                                <Form.Check required label="TTL" name="expirationType" type="radio" id="ttl" onChange={this.handleChange} checked={this.state.expirationType === "ttl"} />
+                                <Form.Check required label="Attempts" name="expirationType" type="radio" id="attempts" onChange={this.handleChange} checked={this.state.expirationType === "attempts"} />
                             </Col>
                         </Row>
                         <Row>

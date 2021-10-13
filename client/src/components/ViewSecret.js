@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Container, Button, FloatingLabel, Toast, Row, Col } from 'react-bootstrap';
+import { Form, Container, Button, FloatingLabel, Row, Col } from 'react-bootstrap';
 import { getSecret } from '../lib/client';
 import { decrypt } from '../lib/cryptography';
 
@@ -79,7 +79,7 @@ class ViewSecret extends React.Component {
                             </FloatingLabel>
                         </Col>
                         <Col>
-                            <Button type="submit" disabled={this.state.lastKey == this.state.redemptionKey}>Fetch</Button>
+                            <Button type="submit" disabled={this.state.lastKey === this.state.redemptionKey}>Fetch</Button>
                         </Col>
                     </Row>
                 </Form>
