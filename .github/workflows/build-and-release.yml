@@ -1,18 +1,19 @@
 name: Build And Release
+
 on: [push]
+
 env:
   CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build-server:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Build
-      run: cd server && cargo build --verbose --release
-    - name: Test
-      run: cd server && cargo test --verbose --release
-    - name: Cache
-      uses: actions/cache@v2
+
+    - uses: actions/cache@v2
       with:
         path: |
           ~/.cargo/bin/
@@ -21,22 +22,33 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build
+      run: cd server && cargo build --verbose --release
+
+    - name: Test
+      run: cd server && cargo test --verbose --release
+
     - name: Archive
       uses: actions/upload-artifact@v2
       with:
         name: server-build
         path: server/target/release/secret-share
+
   build-client:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
     - name: Build
       run: cd client && npm install && npm run build
+
     - name: Archive
       uses: actions/upload-artifact@v2
       with:
         name: client-build
         path: client/build
+
   release:
     needs: [build-server, build-client]
     runs-on: ubuntu-latest
@@ -46,13 +58,30 @@ jobs:
       with:
         name: server-build
         path: server/target/release
+
     - name: Download Client
       uses: actions/download-artifact@v2
       with:
         name: client-build
         path: client
-    - name: Docker
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v2
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+    - name: Build and push Docker image
       uses: docker/build-push-action@v2
       with:
-        push: false
-        tags: secret-share:$GITHUB_REF
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
