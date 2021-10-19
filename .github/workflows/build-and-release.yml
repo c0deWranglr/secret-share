@@ -16,6 +16,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   GCP_REGION: us-central1
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT }}
+  GCP_SERVICE: secret-share
 
 jobs:
   build-server:
@@ -135,5 +136,5 @@ jobs:
 
     - name: Build and Push Container
       run: |-
-        docker build -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{  github.sha }} ./
-        docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{  github.sha }}
+        docker build -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_SERVICE }}:${{  github.sha }} ./
+        docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_SERVICE }}:${{  github.sha }}
