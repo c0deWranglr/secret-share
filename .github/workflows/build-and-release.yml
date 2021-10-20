@@ -67,7 +67,7 @@ jobs:
         name: client-build
         path: client/build
 
-  release-github:
+  release:
     needs: [build-server, build-client]
     runs-on: ubuntu-latest
     steps:
@@ -91,12 +91,24 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup GCloud SDK
+      uses: google-github-actions/setup-gcloud@v0.2.0
+      with:
+        project_id: ${{ env.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
+
+    - name: Authorize GCloud Docker push
+      run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
       uses: docker/metadata-action@v3
       with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        images: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_SERVICE }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v2
@@ -105,36 +117,3 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-
-  release-gcp:
-    needs: [build-server, build-client]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Download Server
-      uses: actions/download-artifact@v2
-      with:
-        name: server-build
-        path: server/target/release
-
-    - name: Download Client
-      uses: actions/download-artifact@v2
-      with:
-        name: client-build
-        path: client/build
-
-    - name: Setup Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.2.0
-      with:
-        project_id: ${{ env.GCP_PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
-        export_default_credentials: true
-
-    - name: Authorize Docker push
-      run: gcloud auth configure-docker us-central1-docker.pkg.dev
-
-    - name: Build and Push Container
-      run: |-
-        docker build -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_SERVICE }}:${{  github.sha }} ./
-        docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_SERVICE }}:${{  github.sha }}
