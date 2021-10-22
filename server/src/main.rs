@@ -33,9 +33,18 @@ async fn index() -> Result<NamedFile, Error> {
 async fn website_content(req: HttpRequest) -> Result<NamedFile, Error> {
     let mut path = PathBuf::from("../client/build/");
     path.push::<PathBuf>(req.match_info().query("filename").parse().unwrap());
+    println!("Looking for {:?}", path);
 
-    let file = NamedFile::open(path)?;
-    Ok(file)
+    let file = NamedFile::open(path);
+    if let Ok(file) = file {
+        return Ok(file)
+    } else {
+        println!("Path not found, returning index");
+        let path = PathBuf::from("../client/build/index.html");
+
+        let file = NamedFile::open(path)?;
+        Ok(file)
+    }
 }
 
 #[actix_web::main]
