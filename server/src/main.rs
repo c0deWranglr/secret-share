@@ -1,6 +1,7 @@
 extern crate rand_core;
 extern crate base64;
 
+mod props;
 mod storage;
 mod api;
 

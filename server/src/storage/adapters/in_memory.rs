@@ -1,15 +1,18 @@
 use super::*;
-use std::{ time::Instant, collections::HashMap};
+use std::collections::HashMap;
+use chrono::{Utc};
 
+#[derive(Serialize, Deserialize)]
 struct StoredValue {
+    key: String,
     value: String,
     access_count: u32,
-    expiration: KeyExpiration,
-    created_at: Instant
+    ttl: Duration,
+    created_at: i64
 }
 
 pub struct InMemoryHash {
-    data: HashMap<String, StoredValue>
+    data: HashMap<String, Bytes>
 }
 
 impl InMemoryHash {
@@ -18,70 +21,82 @@ impl InMemoryHash {
     }
 
     fn expire(val: &StoredValue) -> bool {
-        match val.expiration {
-            KeyExpiration::Never => false,
-            KeyExpiration::AfterUse(times) => val.access_count > times,
-            KeyExpiration::AfterTime(duration) => val.created_at.elapsed() >= duration
-        }
+        Utc::now().timestamp() - val.created_at >= val.ttl.as_secs() as i64
     }
 }
 
 impl StorageAdapter for InMemoryHash {
-    
-    fn get(&mut self, key: &str) -> std::option::Option<String> { 
-        let val = { self.data.get_mut(key) };
-        if let Some(v) = val {
-            v.access_count += 1;
-            let ret_value = v.value.to_owned();
-            
-            if Self::expire(v) { self.data.remove(key); None }
-            else { Some(ret_value) }
-        } else {
-            None
-        }
+
+    fn prepare(&mut self, key: &str, value: String, ttl: Duration) -> Result<Bytes, Box<dyn Error>> {
+        let value = StoredValue { key: key.to_owned(), value, access_count: 0, ttl, created_at: Utc::now().timestamp() };
+        Ok(serde_json::to_vec(&value)?)
     }
 
-    fn set(&mut self, key: &str, value: String, expiration: KeyExpiration) { 
-        self.data.insert(key.to_owned(), StoredValue { value, access_count: 0, expiration, created_at: Instant::now() }); 
+    fn save(&mut self, key: &str, value: Bytes) -> Result<(), Box<dyn Error>>{ 
+        self.data.insert(key.to_owned(), value);
+        Ok(())
     }
 
+    fn get(&mut self, key: &str) -> Result<Bytes, Box<dyn Error>> { 
+        self.data.get(key).map(|value| value.to_owned()).ok_or("Key not found".into())
+    }
+
+    fn extract(&mut self, value: Bytes) -> Result<String, Box<dyn Error>> {
+        let mut val: StoredValue = serde_json::from_slice(&value[..])?;
+        val.access_count += 1;
+        let ret_value = val.value.to_owned();
+        
+        if Self::expire(&val) { self.data.remove(&val.key); Err("Value for key has expired".into()) }
+        else { Ok(ret_value) }
+    }
+
+    fn delete(&mut self, key: &str) -> Result<(), Box<dyn Error>> {
+        self.data.remove(key);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand_core::{OsRng, RngCore};
 
     #[test]
-    fn can_set_and_get() {
+    fn can_set_get_and_delete() {
         let mut adapter = InMemoryHash::new();
 
-        assert_eq!(None, adapter.get("hello"));
-        adapter.set("hello", "world".to_owned(), KeyExpiration::Never);
-        assert_eq!(Some("world".to_owned()), adapter.get("hello"));
-    }
+        // Get (pre save)
+        assert_eq!(true, adapter.get("hello").is_err());
 
-    #[test]
-    fn can_expire_key_after_use() {
-        let mut adapter = InMemoryHash::new();
-        let times = (OsRng.next_u32() % 250) + 1;
-
-        adapter.set("hello", "world".to_owned(), KeyExpiration::AfterUse(times));
-
-        for _ in 0..times {
-            assert_eq!(Some("world".to_owned()), adapter.get("hello")); //Value exists for x # of times
-        }
-        assert_eq!(None, adapter.get("hello"));                         //Value doesn't exist anymore
-    }
-
-    #[test]
-    fn can_expire_key_after_time() {
-        let mut adapter = InMemoryHash::new();
-
-        adapter.set("hello", "world".to_owned(), KeyExpiration::AfterTime(Duration::from_secs(500)));
+        // Save
+        adapter.prepare_and_save("hello", "world".to_owned(), Duration::from_secs(10)).unwrap();
         
-        assert_eq!(Some("world".to_owned()), adapter.get("hello"));                         //Value exists
-        adapter.data.get_mut("hello").map(|v| v.created_at -= Duration::from_secs(500));    //Adjust time
-        assert_eq!(None, adapter.get("hello"));                                             //Value doesn't exist anymore
+        // Get (post save)
+        let data = adapter.get_and_extract("hello");
+        assert_eq!(Some("world".to_owned()), data.ok());
+
+        // Delete
+        adapter.delete("hello").unwrap();
+
+        // Get (post delete)
+        let data = adapter.get_and_extract("hello");
+        assert_eq!(None, data.ok());
+    }
+
+    #[test]
+    fn can_expire_key() {
+        let mut adapter = InMemoryHash::new();
+        let key = "hello".to_owned();
+        let value = "world".to_owned();
+        let ttl = Duration::from_secs(500);
+        let created_at = Utc::now().timestamp();
+
+        let stored = StoredValue { key: key.clone(), value: value.clone(), access_count: 0, ttl: ttl.clone(), created_at };
+        adapter.save(&key, serde_json::to_vec(&stored).unwrap()).unwrap();
+        assert_eq!(Some("world".to_owned()), adapter.get_and_extract("hello").ok());                         //Value exists
+
+        
+        let stored = StoredValue { key: key.clone(), value: value.clone(), access_count: 0, ttl: ttl.clone(), created_at: created_at - 500 };
+        adapter.save(&key, serde_json::to_vec(&stored).unwrap()).unwrap();
+        assert_eq!(true, adapter.get_and_extract("hello").is_err());                             //Value doesn't exist anymore`
     }
 }

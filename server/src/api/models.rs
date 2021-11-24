@@ -7,7 +7,7 @@ pub struct SaveBody {
 
 #[derive(Deserialize)]
 pub struct SaveQuery {
-    pub ttl_min: Option<u64>,
+    pub ttl_min: u64,
     pub attempts: Option<u32>
 }
 
