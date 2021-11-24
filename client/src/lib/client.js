@@ -4,7 +4,7 @@ axios.defaults.baseURL = window['config'].baseUrl;
 
 export async function storeSecret(data, ttl = null, attempts = null) {
     try {
-        let res = await axios.post("/api/save", { value: data }, { params: { ttl: ttl, attempts: attempts } });
+        let res = await axios.post("/api/save", { value: data }, { params: { ttl_min: ttl, attempts: attempts } });
         return res.data.key;
     } catch (err) {
         console.log(err);

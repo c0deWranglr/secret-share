@@ -7,7 +7,7 @@ import { encrypt } from '../lib/cryptography';
 class SaveSecret extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { password: '', token: '', submitted: false, error: null, redemptionKey: null, expirationType: null, expirationValue: '' };
+        this.state = { password: '', token: '', submitted: false, error: null, redemptionKey: null, ttl: '', attempts: '' };
 
         this.handleChange = this.handleChange.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
@@ -15,16 +15,12 @@ class SaveSecret extends React.Component {
     }
 
     componentDidMount() {
-        this.setState({ password: '', token: '', submitted: false, error: null, redemptionKey: null, expirationType: null, expirationValue: '' });
+        this.setState({ password: '', token: '', submitted: false, error: null, redemptionKey: null, ttl: '', attempts: '' });
     }
 
     handleChange(event) {
         let target = event.target;
         var value = target.value;
-        if (target.name === "expirationType") {
-            //Expiration is a radial button that needs to set the id of expirationType
-            value = target.id;
-        }
 
         this.setState({ [target.name]: value });
     }
@@ -33,14 +29,8 @@ class SaveSecret extends React.Component {
         this.setState( { error: null });
 
         let data = encrypt(this.state.token, this.state.password);
-        let ttl = null;
-        let attempts = null; 
-        if (this.state.expirationType === "ttl") { 
-            ttl = this.state.expirationValue;
-        } 
-        else if (this.state.expirationType === "attempts") { 
-            attempts = this.state.expirationValue; 
-        }
+        let ttl = this.state.ttl;
+        let attempts = this.state.attempts ? this.state.attempts : null;
         storeSecret(data, ttl, attempts).then(key => {
             if (key !== undefined) {
                 this.setState( { redemptionKey: key, submitted: true });
@@ -74,22 +64,18 @@ class SaveSecret extends React.Component {
                                 A token or passphrase used to allow viewing the password.
                             </Form.Text>
                         </FloatingLabel>
-                        <Row key="inline-radio">
-                            <Col>
-                            <FloatingLabel label="Expiration">
-                                <Form.Control required name="expirationValue" type="number" placeholder="" onChange={this.handleChange} value={this.state.expirationValue} />
-                                <Form.Text>
-                                    How long the password will be available to share. 
-                                    <br/>TTL - # of minutes to store password. 
-                                    <br/>Attempts - # of times a password is allowed to be accessed.
-                                </Form.Text>
-                            </FloatingLabel>
-                            </Col>
-                            <Col>
-                                <Form.Check required label="TTL" name="expirationType" type="radio" id="ttl" onChange={this.handleChange} checked={this.state.expirationType === "ttl"} />
-                                <Form.Check required label="Attempts" name="expirationType" type="radio" id="attempts" onChange={this.handleChange} checked={this.state.expirationType === "attempts"} />
-                            </Col>
-                        </Row>
+                        <FloatingLabel className="mb-3" label="Expiration Minutes">
+                            <Form.Control required name="ttl" type="number" placeholder="Expiration Minutes" onChange={this.handleChange} value={this.state.ttl} />
+                            <Form.Text>
+                                The number of minutes to keep this password available for access.
+                            </Form.Text>
+                        </FloatingLabel>
+                        <FloatingLabel className="mb-3" label="Max View Attempts">
+                            <Form.Control name="attempts" type="number" placeholder="Max View Attempts" onChange={this.handleChange} value={this.state.attempts} />
+                            <Form.Text>
+                                The maximum number attempts allowed to access this password.
+                            </Form.Text>
+                        </FloatingLabel>
                         <Row>
                             <Col md="auto">
                                 <Button className="mt-1" variant="primary" type="submit">Submit</Button>
