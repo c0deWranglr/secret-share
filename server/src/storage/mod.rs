@@ -1,48 +1,57 @@
+pub mod cipher;
 pub mod adapters;
+mod encryption;
+mod key;
+mod models;
 
+use models::*;
+use encryption::Encrypted;
+use key::KeyGenerator;
 use crate::storage::adapters::StorageAdapter;
+use cipher::{Bytes, Cipher};
 
+use std::result::Result;
+use std::error::Error;
+use std::time::Duration;
 use rand_core::{OsRng, RngCore};
 use base64::{encode_config as encode, URL_SAFE_NO_PAD};
-
+use serde::{Serialize, Deserialize};
 
 pub struct Storage<A: StorageAdapter + ?Sized> {
-    adapter: Box<A>
+    adapter: Encrypted<A>
 }
 
 impl<A: StorageAdapter> Storage<A> {
     pub fn new(adapter: A) -> Storage<A> {
-        return Storage { adapter: Box::new(adapter) }
+        return Storage { adapter: Encrypted::new(adapter) }
     }
 }
 
 impl<A: StorageAdapter + ?Sized> Storage<A> {
-    pub fn save(&mut self, value: String) -> Option<String> {
-        self.save_and_expire(value, adapters::KeyExpiration::Never)
+    pub fn save(&mut self, value: String, allowed_attempts: Option<u32>, ttl: Duration) -> Result<String, Box<dyn Error>> {
+        let key = self.new_key()?;
+        let data = self.adapter.prepare(&key, value, ttl)?;
+        self.adapter.save_encrypted(&key, &StorageItem::new(data, allowed_attempts))?;
+        Ok(key)
     }
 
-    pub fn save_and_expire(&mut self, value: String, expiration: adapters::KeyExpiration) -> Option<String> {
-        let mut bytes = [0u8; 256];
-        OsRng.fill_bytes(&mut bytes);
-        let long_key = encode(bytes, URL_SAFE_NO_PAD);
-        
-        let mut len: usize = 4;
-        loop {
-            if (long_key.len() as isize)-(len as isize) < 0 { return None; }
+    pub fn get(&mut self, key: &String) -> Result<String, Box<dyn Error>> {
+        let mut item = self.adapter.get_encrypted(key)?;
+        self.update_access(key, &mut item)?;
+        self.adapter.extract(item.data)
+    }
 
-            println!("Trying length {}", len);
-            let key = String::from(&long_key[long_key.len()-len..]);
-            if let Some(_) = self.adapter.get(&key) {
-                len += 1;
+    fn update_access(&mut self, key: &str, item: &mut StorageItem) -> Result<(), Box<dyn Error>> {
+        if let Some(max_access) = item.max_access {
+            item.access_count += 1;
+            if item.access_count > max_access {
+                self.adapter.delete(key)?;
+                return Err("Access limit exceeded!".into())
             } else {
-                self.adapter.set(&key, value, expiration);
-                return Some(key);
+                self.adapter.save_encrypted(key, item)?;
             }
         }
-    }
-
-    pub fn get(&mut self, key: &String) -> Option<String> {
-        self.adapter.get(key)
+        Ok(())
     }
 }
 
@@ -51,45 +60,48 @@ mod tests {
     use super::*;
 
     struct MockAdapter {
-        ret: Vec<Option<String>>,
-        saves: Vec<(String, String)>
+        ret: Vec<Result<Bytes, Box<dyn Error>>>,
+        saves: Vec<(String, Bytes)>,
+        deletes: Vec<String>
     }
 
     impl StorageAdapter for MockAdapter {
-        fn get(&mut self, _: &str) -> std::option::Option<std::string::String> { self.ret.remove(0) }
-        fn set(&mut self, key: &str, value: std::string::String, _: adapters::KeyExpiration) { self.saves.push((key.to_owned(), value)) }
-    }
-
-    #[test]
-    fn four_digit_key_saved_on_no_collision() {
-        let mut storage = Storage::new(MockAdapter { ret: vec![None], saves: vec![] });
-        let value = "some_value".to_owned();
+        fn prepare(&mut self, _: &str, value: String, _: Duration) -> Result<Bytes, Box<dyn Error>> { Ok(value.into_bytes()) }
+    
+        fn save(&mut self, key: &str, value: Bytes) -> Result<(), Box<dyn Error>> { self.saves.push((key.to_owned(), value)); Ok(()) }
         
-        let key = storage.save(value.clone()).unwrap();
-        println!("Key: {}", &key);
-        assert_eq!(4, key.len());
-        assert_eq!(vec![(key, value)], (storage.adapter.as_ref() as &MockAdapter).saves)
+        fn get(&mut self, _: &str) -> Result<Bytes, Box<dyn Error>> { self.ret.remove(0) }
+    
+        fn extract(&mut self, value: Bytes) -> Result<String, Box<dyn Error>> { Ok(String::from_utf8(value)?) }
+
+        fn delete(&mut self, key: &str) -> Result<(), Box<dyn Error>> { self.deletes.push(key.to_owned()); Ok(()) }
     }
 
     #[test]
-    fn five_digit_key_saved_on_single_collision() {
-        let mut storage = Storage::new(MockAdapter { ret: vec![Some("".to_owned()), None], saves: vec![] });
-        let value = "some_value".to_owned();
+    fn update_item_after_access() {
+        let key = String::from("my_key");
+        let mut item = StorageItem { data: String::from("some_value").into_bytes(), access_count: 0, max_access: Some(1) };
+        let mut storage = Storage::new(MockAdapter { ret: vec![], saves: vec![], deletes: vec![] });
+        
+        let res = storage.update_access(&key, &mut item);
+        assert_eq!(true, res.is_ok());
 
-        let key = storage.save(value.clone()).unwrap();
-        println!("Key: {}", &key);
-        assert_eq!(5, key.len());
-        assert_eq!(vec![(key, value)], (storage.adapter.as_ref() as &MockAdapter).saves)
+        let saves = &storage.adapter.saves;
+        assert_eq!(1, saves.len());
+        assert_eq!(&key, &saves.get(0).unwrap().0);
     }
 
     #[test]
-    fn no_key_saved_on_full_collision() {
-        let mut storage = Storage::new(MockAdapter { ret: vec![Some("".to_owned()); 512], saves: vec![] });
-        let value = "some_value".to_owned();
+    fn reject_access_after_max_reached() {
+        let key = String::from("my_key");
+        let mut item = StorageItem { data: String::from("some_value").into_bytes(), access_count: 1, max_access: Some(1) };
+        let mut storage = Storage::new(MockAdapter { ret: vec![], saves: vec![], deletes: vec![] });
+        
+        let res = storage.update_access(&key, &mut item);
+        assert_eq!(false, res.is_ok());
 
-        let key = storage.save(value);
-        println!("Key: {:?}", &key);
-        assert_eq!(None, key);
-        assert_eq!(Vec::<(String, String)>::new(), (storage.adapter.as_ref() as &MockAdapter).saves)
+        let deletes = &storage.adapter.deletes;
+        assert_eq!(1, deletes.len());
+        assert_eq!(Some(&key), deletes.get(0));
     }
 }
