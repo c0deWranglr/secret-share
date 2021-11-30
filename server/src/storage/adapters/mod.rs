@@ -1,6 +1,8 @@
 pub mod in_memory;
+pub mod google_cloud_storage;
 
 pub use in_memory::InMemoryHash;
+pub use google_cloud_storage::CloudStorage;
 
 use std::time::Duration;
 use std::result::Result;

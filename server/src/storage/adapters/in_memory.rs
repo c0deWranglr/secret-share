@@ -6,7 +6,6 @@ use chrono::{Utc};
 struct StoredValue {
     key: String,
     value: String,
-    access_count: u32,
     ttl: Duration,
     created_at: i64
 }
@@ -28,7 +27,7 @@ impl InMemoryHash {
 impl StorageAdapter for InMemoryHash {
 
     fn prepare(&mut self, key: &str, value: String, ttl: Duration) -> Result<Bytes, Box<dyn Error>> {
-        let value = StoredValue { key: key.to_owned(), value, access_count: 0, ttl, created_at: Utc::now().timestamp() };
+        let value = StoredValue { key: key.to_owned(), value, ttl, created_at: Utc::now().timestamp() };
         Ok(serde_json::to_vec(&value)?)
     }
 
@@ -42,11 +41,10 @@ impl StorageAdapter for InMemoryHash {
     }
 
     fn extract(&mut self, value: Bytes) -> Result<String, Box<dyn Error>> {
-        let mut val: StoredValue = serde_json::from_slice(&value[..])?;
-        val.access_count += 1;
+        let val: StoredValue = serde_json::from_slice(&value[..])?;
         let ret_value = val.value.to_owned();
         
-        if Self::expire(&val) { self.data.remove(&val.key); Err("Value for key has expired".into()) }
+        if Self::expire(&val) { self.delete(&val.key)?; Err("Value for key has expired".into()) }
         else { Ok(ret_value) }
     }
 
@@ -90,12 +88,12 @@ mod tests {
         let ttl = Duration::from_secs(500);
         let created_at = Utc::now().timestamp();
 
-        let stored = StoredValue { key: key.clone(), value: value.clone(), access_count: 0, ttl: ttl.clone(), created_at };
+        let stored = StoredValue { key: key.clone(), value: value.clone(), ttl: ttl.clone(), created_at };
         adapter.save(&key, serde_json::to_vec(&stored).unwrap()).unwrap();
         assert_eq!(Some("world".to_owned()), adapter.get_and_extract("hello").ok());                         //Value exists
 
         
-        let stored = StoredValue { key: key.clone(), value: value.clone(), access_count: 0, ttl: ttl.clone(), created_at: created_at - 500 };
+        let stored = StoredValue { key: key.clone(), value: value.clone(), ttl: ttl.clone(), created_at: created_at - 500 };
         adapter.save(&key, serde_json::to_vec(&stored).unwrap()).unwrap();
         assert_eq!(true, adapter.get_and_extract("hello").is_err());                             //Value doesn't exist anymore`
     }

@@ -16,6 +16,7 @@ serde_json = "1"
 serde_bytes = "0.11.5"
 base64 = "0.13.0"
 lazy_static = "1.4.0"
+cloud-storage = { version = "0.10", features = ["global-client", "sync"] }
 aes = "0.7.5"
 block-modes = "0.8.1"
 chrono = "0.4.19"
