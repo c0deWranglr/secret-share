@@ -1,5 +1,7 @@
 FROM debian:buster-slim
 
+RUN apt update && apt install -y openssl
+
 COPY docker-run.sh docker-run.sh
 COPY server/target/release/secret-share /server/secret-share
 COPY client/build /client/build
