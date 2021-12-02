@@ -12,14 +12,22 @@ impl<A: StorageAdapter> Routes<A> {
     pub async fn load(web::Path(key): web::Path<String>, data: web::Data<SharedStorage<A>>) -> impl Responder {
         let mut storage = data.lock().unwrap();
         let data = storage.get(&key);
-        if data.is_err() { println!("Exceptional load result: {:?}", data) }
-        HttpResponse::Ok().json(LoadedData { data: data.ok() })
+        if data.is_err() { 
+            println!("Exceptional load result: {:?}", data);
+            HttpResponse::InternalServerError().body("Error handling request")
+        } else {
+            HttpResponse::Ok().json(LoadedData { data: data.ok() })
+        }
     }
     
     pub async fn save(req_body: web::Json<SaveBody>, data: web::Data<SharedStorage<A>>, query: web::Query<SaveQuery>) -> impl Responder {    
         let mut storage = data.lock().unwrap();
         let key = storage.save(req_body.into_inner().value, query.attempts, Duration::from_secs(query.ttl_min*60));
-        if key.is_err() { println!("Exceptional save result: {:?}", key) }
-        HttpResponse::Ok().json(SavedKey { key: key.ok() })
+        if key.is_err() { 
+            println!("Exceptional save result: {:?}", key) ;
+            HttpResponse::InternalServerError().body("Error handling request")
+        } else {
+            HttpResponse::Ok().json(SavedKey { key: key.ok() })
+        }
     }
 }
