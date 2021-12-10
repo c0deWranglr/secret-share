@@ -1,0 +1,44 @@
+.homeHeader {
+    color: var(--bs-gray-600);
+    font-weight: 700;
+    font-size: 3.2rem;
+    margin: 1rem 0;
+}
+
+.homeDesc {
+    color: var(--bs-gray-700);
+    line-height: 2;
+    font-size: 1.6rem;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.featureCol {
+    text-align: center;
+    justify-content: center;
+}
+
+ul {
+    justify-content: center;
+    justify-items: center;
+    text-align: center;
+}
+
+li {
+	margin: 0;
+	padding: 5px 0 10px 36px;
+    text-align: left;
+	list-style: none;
+	background-image: url(../assets/shield_check.svg);
+	background-repeat: no-repeat;
+	background-position: left center;
+	background-size: 30px;
+}
+
+li.numbered {
+    background-image: unset;
+    list-style: decimal;
+    padding-top: 20px;
+    padding-left: 10px;
+    font-size: large;
+}
