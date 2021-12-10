@@ -1,0 +1,16 @@
+.logoHeadingBackground {
+    background-color: #e9ecef;
+}
+
+.logoHeading {
+    background-image: url(../assets/lock.svg);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    background-size: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 450px;
+    margin: 0 auto;
+    max-width: 800px;
+}
