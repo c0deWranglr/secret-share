@@ -7,7 +7,8 @@ import ViewSecret from './components/ViewSecret';
 
 function App() {
 
-  const name = "Secret Share"; //TODO Get from env
+  const name = window["config"].siteName;
+  document.title = name;
 
   return (
     <>
