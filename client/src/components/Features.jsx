@@ -12,7 +12,7 @@ export function FeatureCol(props) {
     return (
         <Col className="featureCol" {...props} >
             <h2 className="pt-4">{props.title}</h2>
-            <div className="d-flex justify-content-center">{props.children}</div>
+            {props.children}
         </Col>
     );
 }
@@ -32,7 +32,9 @@ export function ImageCol(props) {
 export function ListCol(props) {
     return (
         <FeatureCol title={props.title} md={6} style={{'background-color': 'var(--bs-gray-200)', 'border-radius': '10px'}} {...props}>
-            {props.children}
+            <div className="d-flex justify-content-center">
+                {props.children}
+            </div>
         </FeatureCol>
     )
 }
