@@ -8,4 +8,9 @@ then
     sed -i "s|{{site_name}}|$2|g" client/build/config.js
 fi
 
+if [ -n "$3" ]
+then
+    sed -i "s|{{hCaptcha_key}}|$3|g" client/build/config.js
+fi
+
 ./server/secret-share
