@@ -6,6 +6,11 @@ p {
     color: var(--bs-gray-900);
 }
 
+h3 {
+    color: var(--bs-gray-900);
+    text-align: center;
+}
+
 li {
     background-image: unset;
     list-style: decimal;
@@ -17,4 +22,10 @@ li {
 
 .view-form-container {
     max-width: 800px !important;
+}
+
+textarea {
+    color: var(--bs-gray-600);
+    resize: none !important;
+    border-style: none;
 }
