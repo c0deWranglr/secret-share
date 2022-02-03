@@ -6,8 +6,9 @@ import StepForm from "../components/StepForm";
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { getSecret } from '../lib/client';
 import { decrypt } from '../lib/cryptography';
+import { resetInputs } from "../lib/inputUtils";
 
-import "../style/view.css";
+import "../style/formRoutes.css";
 
 const initialState = {
     captchaPass: false,
@@ -77,7 +78,7 @@ export default function View(props) {
                     </Step>
                     <Row className="mt-3 text-center" 
                          hidden={!validToken()}>
-                        <p>{decrypt(token, secret)}</p>
+                        <textarea>{decrypt(token, secret)}</textarea>
                     </Row>
                 </StepForm>
             </Container>
@@ -110,12 +111,4 @@ function extractKey(location) {
     var end = params.indexOf("&", start);
     if (end < 0) { end = params.length; }
     return params.substring(start, end);
-}
-
-function resetInputs() {
-    Array.from(document.getElementsByTagName("input")).forEach(item => {
-        if (item.value !== item.defaultValue) {
-            item.value = item.defaultValue;
-        }
-    });
 }
