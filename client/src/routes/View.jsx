@@ -15,6 +15,7 @@ const initialState = {
     key: '',
     keyAttempts: 0,
     token: '',
+    tokenAttempts: 0,
     secret: ''
 };
 
@@ -70,15 +71,19 @@ export default function View(props) {
                     <Step hidden={!validKey()} 
                           label="2. Decrypt Token" 
                           buttonText="Decrypt"
-                          showButton={true}
-                          onButtonClick={() => update({ token: token })}>
-                        <Form.Control placeholder="12345" 
+                          showButton={!validToken()}
+                          onButtonClick={() => update({ token: decrypt(token, secret) ? token : '', tokenAttempts: state.tokenAttempts+1 })}>
+                        <Form.Control isInvalid={state.tokenAttempts > 0 && !validToken()}
+                                      placeholder="12345" 
                                       defaultValue={token}
+                                      plaintext={validToken()} 
+                                      readOnly={validToken()} 
                                       onChange={e => token = e.target.value } />
+                        <Form.Control.Feedback type="invalid">This token is invalid, please try again</Form.Control.Feedback>
                     </Step>
                     <Row className="mt-3 text-center" 
                          hidden={!validToken()}>
-                        <textarea>{decrypt(token, secret)}</textarea>
+                        <textarea disabled value={decrypt(token, secret)} />
                     </Row>
                 </StepForm>
             </Container>

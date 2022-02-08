@@ -28,4 +28,5 @@ textarea {
     color: var(--bs-gray-600);
     resize: none !important;
     border-style: none;
+    text-align: center;
 }
