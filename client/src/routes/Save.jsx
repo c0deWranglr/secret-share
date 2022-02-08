@@ -85,6 +85,7 @@ export default function Save(props) {
                                       type="number" />
                         <Form.Control placeholder="Max Attempts (optional)"
                                       onChange={e => maxAttempts = e.target.value }
+                                      onBlur={() => update({ maxAttempts: maxAttempts }) }
                                       defaultValue={maxAttempts}
                                       min={0}
                                       type="number"

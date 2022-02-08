@@ -8,7 +8,7 @@ export default function Step(props) {
                 {props.children}
             </Col>
             <Col className={"d-flex justify-content-end " + (props.buttonPlacement === "bottom" ? "align-items-end" : "align-items-start")}>
-                <Button type="submit" variant="primary" hidden={!props.showButton} onClick={props.onButtonClick}>{props.buttonText}</Button>
+                <Button type={props.showButton ? "submit" : ""} variant="primary" hidden={!props.showButton} disabled={!props.showButton} onClick={props.onButtonClick}>{props.buttonText}</Button>
             </Col>
         </Row>
     );
