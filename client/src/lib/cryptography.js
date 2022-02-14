@@ -6,9 +6,13 @@ export function encrypt(token, data) {
 }
 
 export function decrypt(token, data) {
-    let key = hash(token, 1000);
-    let bytes = CryptoJS.AES.decrypt(data, key);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    try {
+        let key = hash(token, 1000);
+        let bytes = CryptoJS.AES.decrypt(data, key);
+        return bytes.toString(CryptoJS.enc.Utf8);
+    } catch {
+        return ''
+    }
 }
 
 function hash(value, times) {
