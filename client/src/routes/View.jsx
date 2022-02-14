@@ -83,7 +83,7 @@ export default function View(props) {
                     </Step>
                     <Row className="mt-3 text-center" 
                          hidden={!validToken()}>
-                        <textarea disabled value={decrypt(token, secret)} />
+                        <textarea disabled value={validKey() && validToken() ? decrypt(token, secret) : ''} />
                     </Row>
                 </StepForm>
             </Container>
