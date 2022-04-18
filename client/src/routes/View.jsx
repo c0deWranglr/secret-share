@@ -11,7 +11,7 @@ import { resetInputs } from "../lib/inputUtils";
 import "../style/formRoutes.css";
 
 const initialState = {
-    captchaPass: false,
+    captcha: null,
     key: '',
     keyAttempts: 0,
     token: '',
@@ -49,17 +49,17 @@ export default function View(props) {
             <Container className="mb-4 view-form-container">
                 <Container className="mt-4 d-flex justify-content-center">
                     <HCaptcha sitekey={window['config'].hCaptchaKey}
-                              onVerify={() => update({ captchaPass: true })} 
-                              onExpire={() => update({ captchaPass: false })} 
-                              onError={() => update({ captchaPass: false })} />
+                              onVerify={(token) => update({ captcha: token })} 
+                              onExpire={() => update({ captcha: null })} 
+                              onError={() => update({ captcha: null })} />
                 </Container>
-                <StepForm hidden={!state.captchaPass} 
+                <StepForm hidden={!state.captcha} 
                           canClear={validKey()} 
-                          clearState={() => setState({ ...initialState, captchaPass: state.captchaPass })}>
+                          clearState={() => setState({ ...initialState, captcha: state.captcha })}>
                     <Step label="1. Access Key" 
                           buttonText="Load"
                           showButton={!validKey()}
-                          onButtonClick={() => { loadSecret(key).then(secret => update({ key: key, secret: secret, keyAttempts: state.keyAttempts+1 })); }}>
+                          onButtonClick={() => { loadSecret(state.captcha, key).then(secret => update({ key: key, secret: secret, keyAttempts: state.keyAttempts+1 })); }}>
                         <Form.Control isInvalid={state.keyAttempts > 0 && !validKey()} 
                                       placeholder="GXy2" 
                                       defaultValue={key} 
@@ -91,9 +91,9 @@ export default function View(props) {
     );
 }
 
-async function loadSecret(key) {
+async function loadSecret(captcha, key) {
    if (key) {
-       const secret = await getSecret(key);
+       const secret = await getSecret(captcha, key);
        if (secret) {
            return Promise.resolve(secret);
        }

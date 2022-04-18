@@ -12,7 +12,7 @@ import { encrypt } from '../lib/cryptography';
 import "../style/formRoutes.css";
 
 const initialState = {
-    captchaPass: false,
+    captcha: null,
     secret: '',
     token: '',
     expiration: null,
@@ -49,13 +49,13 @@ export default function Save(props) {
                 </ul>
             </LogoHeading>
             <Container className="mb-4 view-form-container">
-                <Container className={state.captchaPass && key ? "d-none" : "mt-4 d-flex justify-content-center"}>
+                <Container className={state.captcha && key ? "d-none" : "mt-4 d-flex justify-content-center"}>
                     <HCaptcha sitekey={window['config'].hCaptchaKey}
-                              onVerify={() => update({ captchaPass: true })} 
-                              onExpire={() => update({ captchaPass: false })} 
-                              onError={() => update({ captchaPass: false })} />
+                              onVerify={(token) => update({ captcha: token }) } 
+                              onExpire={() => update({ captcha: null })} 
+                              onError={() => update({ captcha: null })} />
                 </Container>
-                <StepForm hidden={!state.captchaPass || key}
+                <StepForm hidden={!state.captcha || key}
                           canClear={false}>
                     <Step label="1. Encrypt the Secret"
                           buttonText="Encrypt"
@@ -101,7 +101,7 @@ export default function Save(props) {
                         </div>
                     </Step>
                 </StepForm>
-                <Container className={state.captchaPass && key ? "mt-4 d-flex justify-content-center" : "d-none"}>
+                <Container className={state.captcha && key ? "mt-4 d-flex justify-content-center" : "d-none"}>
                     <h3>
                         Access Key:
                         <br/>
@@ -115,8 +115,8 @@ export default function Save(props) {
     );
 };
 
-async function encryptAndSave({ secret, token, expiration, maxAttempts }) {
+async function encryptAndSave({ captcha, secret, token, expiration, maxAttempts }) {
     const encrypted = encrypt(token, secret);
-    const key = await storeSecret(encrypted, expiration, maxAttempts);
+    const key = await storeSecret(captcha, encrypted, expiration, maxAttempts);
     return Promise.resolve(key ? key : '');
 };
