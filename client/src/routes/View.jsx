@@ -12,11 +12,10 @@ import "../style/formRoutes.css";
 
 const initialState = {
     captcha: null,
-    key: '',
-    keyAttempts: 0,
+    key: '123',
     token: '',
-    tokenAttempts: 0,
-    secret: ''
+    secret: '123',
+    errorMessage: null
 };
 
 export default function View(props) {
@@ -54,32 +53,36 @@ export default function View(props) {
                               onError={() => update({ captcha: null })} />
                 </Container>
                 <StepForm hidden={!state.captcha} 
+                          errorMessage={state.errorMessage}
                           canClear={validKey()} 
                           clearState={() => setState({ ...initialState, captcha: state.captcha })}>
                     <Step label="1. Access Key" 
                           buttonText="Load"
                           showButton={!validKey()}
-                          onButtonClick={() => { loadSecret(state.captcha, key).then(secret => update({ key: key, secret: secret, keyAttempts: state.keyAttempts+1 })); }}>
-                        <Form.Control isInvalid={state.keyAttempts > 0 && !validKey()} 
-                                      placeholder="GXy2" 
+                          onButtonClick={() => loadSecret(state.captcha, key).then(secret => { 
+                              if (!secret) update({ errorMessage: 'Error loading secret. Please enter a valid access key.' });
+                              else update({ key: key, secret: secret, errorMessage: null });
+                          })}>
+                        <Form.Control placeholder="GXy2" 
                                       defaultValue={key} 
                                       plaintext={validKey()} 
                                       readOnly={validKey()} 
                                       onChange={e => key = e.target.value } />
-                        <Form.Control.Feedback type="invalid">Please enter a valid Access Key</Form.Control.Feedback>
                     </Step>
                     <Step hidden={!validKey()} 
                           label="2. Decrypt Token" 
                           buttonText="Decrypt"
                           showButton={!validToken()}
-                          onButtonClick={() => update({ token: decrypt(token, secret) ? token : '', tokenAttempts: state.tokenAttempts+1 })}>
-                        <Form.Control isInvalid={state.tokenAttempts > 0 && !validToken()}
-                                      placeholder="12345" 
+                          onButtonClick={() => {
+                              const decrypted = decrypt(token, secret);
+                              if (!decrypted) update({ errorMessage: 'The token you entered is incorrect. Please enter the valid token.'})
+                              else update({ token: decrypted, errorMessage: null });
+                          }}>
+                        <Form.Control placeholder="12345" 
                                       defaultValue={token}
                                       plaintext={validToken()} 
                                       readOnly={validToken()} 
                                       onChange={e => token = e.target.value } />
-                        <Form.Control.Feedback type="invalid">This token is invalid, please try again</Form.Control.Feedback>
                     </Step>
                     <Row className="mt-3 text-center" 
                          hidden={!validToken()}>

@@ -17,7 +17,8 @@ const initialState = {
     token: '',
     expiration: null,
     maxAttempts: null,
-    key: ''
+    key: '',
+    errorMessage: null,
 };
 
 export default function Save(props) {
@@ -56,6 +57,7 @@ export default function Save(props) {
                               onError={() => update({ captcha: null })} />
                 </Container>
                 <StepForm hidden={!state.captcha || key}
+                          errorMessage={state.errorMessage}
                           canClear={false}>
                     <Step label="1. Encrypt the Secret"
                           buttonText="Encrypt"
@@ -95,7 +97,10 @@ export default function Save(props) {
                         <div className="d-flex justify-content-end">
                             <Button type="submit"
                                     disabled={!validExpiration()} 
-                                    onClick={() => encryptAndSave(state).then((key) => update({ key: key }))}>
+                                    onClick={() => encryptAndSave(state).then((key) => {
+                                        if (!key) { update({ errorMessage: 'Error saving secret. Please try again.' })}
+                                        else update({ key: key, errorMessage: null });
+                                    })}>
                                 Save
                             </Button>
                         </div>
@@ -118,5 +123,5 @@ export default function Save(props) {
 async function encryptAndSave({ captcha, secret, token, expiration, maxAttempts }) {
     const encrypted = encrypt(token, secret);
     const key = await storeSecret(captcha, encrypted, expiration, maxAttempts);
-    return Promise.resolve(key ? key : '');
+    return Promise.resolve(key);
 };
