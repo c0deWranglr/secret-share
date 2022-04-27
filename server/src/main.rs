@@ -1,6 +1,7 @@
 extern crate rand_core;
 extern crate base64;
 extern crate cloud_storage;
+extern crate awc;
 
 mod props;
 mod storage;

@@ -11,12 +11,11 @@ import { resetInputs } from "../lib/inputUtils";
 import "../style/formRoutes.css";
 
 const initialState = {
-    captchaPass: false,
+    captcha: null,
     key: '',
-    keyAttempts: 0,
     token: '',
-    tokenAttempts: 0,
-    secret: ''
+    secret: '',
+    errorMessage: null
 };
 
 export default function View(props) {
@@ -49,37 +48,41 @@ export default function View(props) {
             <Container className="mb-4 view-form-container">
                 <Container className="mt-4 d-flex justify-content-center">
                     <HCaptcha sitekey={window['config'].hCaptchaKey}
-                              onVerify={() => update({ captchaPass: true })} 
-                              onExpire={() => update({ captchaPass: false })} 
-                              onError={() => update({ captchaPass: false })} />
+                              onVerify={(token) => update({ captcha: token })} 
+                              onExpire={() => update({ captcha: null })} 
+                              onError={() => update({ captcha: null })} />
                 </Container>
-                <StepForm hidden={!state.captchaPass} 
+                <StepForm hidden={!state.captcha} 
+                          errorMessage={state.errorMessage}
                           canClear={validKey()} 
-                          clearState={() => setState({ ...initialState, captchaPass: state.captchaPass })}>
+                          clearState={() => setState({ ...initialState, captcha: state.captcha })}>
                     <Step label="1. Access Key" 
                           buttonText="Load"
                           showButton={!validKey()}
-                          onButtonClick={() => { loadSecret(key).then(secret => update({ key: key, secret: secret, keyAttempts: state.keyAttempts+1 })); }}>
-                        <Form.Control isInvalid={state.keyAttempts > 0 && !validKey()} 
-                                      placeholder="GXy2" 
+                          onButtonClick={() => loadSecret(state.captcha, key).then(secret => { 
+                              if (!secret) update({ errorMessage: 'Error loading secret. Please enter a valid access key.' });
+                              else update({ key: key, secret: secret, errorMessage: null });
+                          })}>
+                        <Form.Control placeholder="GXy2" 
                                       defaultValue={key} 
                                       plaintext={validKey()} 
                                       readOnly={validKey()} 
                                       onChange={e => key = e.target.value } />
-                        <Form.Control.Feedback type="invalid">Please enter a valid Access Key</Form.Control.Feedback>
                     </Step>
                     <Step hidden={!validKey()} 
                           label="2. Decrypt Token" 
                           buttonText="Decrypt"
                           showButton={!validToken()}
-                          onButtonClick={() => update({ token: decrypt(token, secret) ? token : '', tokenAttempts: state.tokenAttempts+1 })}>
-                        <Form.Control isInvalid={state.tokenAttempts > 0 && !validToken()}
-                                      placeholder="12345" 
+                          onButtonClick={() => {
+                              const decrypted = decrypt(token, secret);
+                              if (!decrypted) update({ errorMessage: 'The token you entered is incorrect. Please enter the valid token.'})
+                              else update({ token: decrypted, errorMessage: null });
+                          }}>
+                        <Form.Control placeholder="12345" 
                                       defaultValue={token}
                                       plaintext={validToken()} 
                                       readOnly={validToken()} 
                                       onChange={e => token = e.target.value } />
-                        <Form.Control.Feedback type="invalid">This token is invalid, please try again</Form.Control.Feedback>
                     </Step>
                     <Row className="mt-3 text-center" 
                          hidden={!validToken()}>
@@ -91,9 +94,9 @@ export default function View(props) {
     );
 }
 
-async function loadSecret(key) {
+async function loadSecret(captcha, key) {
    if (key) {
-       const secret = await getSecret(key);
+       const secret = await getSecret(captcha, key);
        if (secret) {
            return Promise.resolve(secret);
        }

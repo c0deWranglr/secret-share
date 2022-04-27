@@ -12,12 +12,13 @@ import { encrypt } from '../lib/cryptography';
 import "../style/formRoutes.css";
 
 const initialState = {
-    captchaPass: false,
+    captcha: null,
     secret: '',
     token: '',
     expiration: null,
     maxAttempts: null,
-    key: ''
+    key: '',
+    errorMessage: null,
 };
 
 export default function Save(props) {
@@ -49,13 +50,14 @@ export default function Save(props) {
                 </ul>
             </LogoHeading>
             <Container className="mb-4 view-form-container">
-                <Container className={state.captchaPass && key ? "d-none" : "mt-4 d-flex justify-content-center"}>
+                <Container className={state.captcha && key ? "d-none" : "mt-4 d-flex justify-content-center"}>
                     <HCaptcha sitekey={window['config'].hCaptchaKey}
-                              onVerify={() => update({ captchaPass: true })} 
-                              onExpire={() => update({ captchaPass: false })} 
-                              onError={() => update({ captchaPass: false })} />
+                              onVerify={(token) => update({ captcha: token }) } 
+                              onExpire={() => update({ captcha: null })} 
+                              onError={() => update({ captcha: null })} />
                 </Container>
-                <StepForm hidden={!state.captchaPass || key}
+                <StepForm hidden={!state.captcha || key}
+                          errorMessage={state.errorMessage}
                           canClear={false}>
                     <Step label="1. Encrypt the Secret"
                           buttonText="Encrypt"
@@ -95,13 +97,16 @@ export default function Save(props) {
                         <div className="d-flex justify-content-end">
                             <Button type="submit"
                                     disabled={!validExpiration()} 
-                                    onClick={() => encryptAndSave(state).then((key) => update({ key: key }))}>
+                                    onClick={() => encryptAndSave(state).then((key) => {
+                                        if (!key) { update({ errorMessage: 'Error saving secret. Please try again.' })}
+                                        else update({ key: key, errorMessage: null });
+                                    })}>
                                 Save
                             </Button>
                         </div>
                     </Step>
                 </StepForm>
-                <Container className={state.captchaPass && key ? "mt-4 d-flex justify-content-center" : "d-none"}>
+                <Container className={state.captcha && key ? "mt-4 d-flex justify-content-center" : "d-none"}>
                     <h3>
                         Access Key:
                         <br/>
@@ -115,8 +120,8 @@ export default function Save(props) {
     );
 };
 
-async function encryptAndSave({ secret, token, expiration, maxAttempts }) {
+async function encryptAndSave({ captcha, secret, token, expiration, maxAttempts }) {
     const encrypted = encrypt(token, secret);
-    const key = await storeSecret(encrypted, expiration, maxAttempts);
-    return Promise.resolve(key ? key : '');
+    const key = await storeSecret(captcha, encrypted, expiration, maxAttempts);
+    return Promise.resolve(key);
 };
