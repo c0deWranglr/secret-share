@@ -12,9 +12,9 @@ import "../style/formRoutes.css";
 
 const initialState = {
     captcha: null,
-    key: '123',
+    key: '',
     token: '',
-    secret: '123',
+    secret: '',
     errorMessage: null
 };
 
