@@ -44,7 +44,7 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let captcha_header = req.get_header::<super::web::XCaptchaToken>();
         let service_call = self.service.call(req);
-        Box::pin(async move {
+        Box::pin(async {
             if let Some(captcha_header) = captcha_header {
                 let mut res = awc::Client::default()
                                       .post("https://hcaptcha.com/siteverify")
