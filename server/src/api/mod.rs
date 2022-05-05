@@ -7,7 +7,7 @@ pub use routes::Routes;
 use crate::storage::adapters::StorageAdapter;
 use actix_web::{web};
 
-pub fn configure<A: StorageAdapter + 'static>(cfg: &mut web::ServiceConfig) {
+pub fn configure<A: StorageAdapter + Send + 'static>(cfg: &mut web::ServiceConfig) {
     cfg.service(web::resource("/load/{key}")
                     .wrap(middleware::captcha::Validation)
                     .route(web::get()

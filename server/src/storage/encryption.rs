@@ -26,14 +26,14 @@ impl<A: StorageAdapter + ?Sized> DerefMut for Encrypted<A> {
 }
 
 impl<A: StorageAdapter + ?Sized> Encrypted<A> {
-    pub fn save_encrypted(&mut self, key: &str, item: &StorageItem) -> Result<(), Box<dyn Error>> {
+    pub async fn save_encrypted(&mut self, key: &str, item: &StorageItem) -> Result<(), Box<dyn Error>> {
         let bytes = serde_json::to_vec(item)?;
         let encrypted = Cipher::encrypt(&bytes)?;
-        self.adapter.save(&key, encrypted)
+        self.adapter.save(&key, encrypted).await
     }
 
-    pub fn get_encrypted(&mut self, key: &str) -> Result<StorageItem, Box<dyn Error>> {
-        let encrypted = self.adapter.get(key)?;
+    pub async fn get_encrypted(&mut self, key: &str) -> Result<StorageItem, Box<dyn Error>> {
+        let encrypted = self.adapter.get(key).await?;
         let decrypted = Cipher::decrypt(&encrypted)?;
         let item = serde_json::from_slice::<StorageItem>(&decrypted[..])?;
         Ok(item)
@@ -44,30 +44,41 @@ impl<A: StorageAdapter + ?Sized> Encrypted<A> {
 mod tests {
     use super::*;
 
-    struct MockCryptoAdapter {
+    pub struct MockCryptoAdapter {
         saves: Vec<(String, Bytes)>,
-        gets: Vec<Result<Bytes, Box<dyn Error>>>
+        gets: Vec<Bytes>
     }
 
+    #[async_trait::async_trait]
     impl StorageAdapter for MockCryptoAdapter {
-        fn prepare(&mut self, _: &str, _: String, _: Duration) -> Result<Bytes, Box<dyn Error>> { panic!() }
+        async fn prepare(&mut self, _: &str, _: String, _: Duration) -> Result<Bytes, Box<dyn Error>> { 
+            panic!() 
+        }
     
-        fn save(&mut self, key: &str, value: Bytes) -> Result<(), Box<dyn Error>> { self.saves.push((key.to_owned(), value)); Ok(()) }
+        async fn save(&mut self, key: &str, value: Bytes) -> Result<(), Box<dyn Error>> { 
+            self.saves.push((key.to_owned(), value)); Ok(()) 
+        }
         
-        fn get(&mut self, _: &str) -> Result<Bytes, Box<dyn Error>> { self.gets.remove(0) }
+        async fn get(&mut self, _: &str) -> Result<Bytes, Box<dyn Error>> { 
+            Ok(self.gets.remove(0))
+        }
     
-        fn extract(&mut self, _: Bytes) -> Result<String, Box<dyn Error>> { panic!() }
+        async fn extract(&mut self, _: Bytes) -> Result<String, Box<dyn Error>> { 
+            panic!() 
+        }
     
-        fn delete(&mut self, _: &str) -> Result<(), Box<dyn Error>> { panic!() }
+        async fn delete(&mut self, _: &str) -> Result<(), Box<dyn Error>> { 
+            panic!()
+        }
     }
 
-    #[test]
-    fn encrypted_on_save() {
+    #[actix_web::test]
+    async fn encrypted_on_save() {
         let key = "my_key".to_owned();
         let item = StorageItem::new("hello, world".as_bytes().to_owned(), None);
 
         let mut adapter = Encrypted::new(MockCryptoAdapter { saves: vec![], gets: vec![] });
-        let res = adapter.save_encrypted(&key, &item);
+        let res = adapter.save_encrypted(&key, &item).await;
         assert_eq!(true, res.is_ok());
 
         let saves = &(adapter.adapter.as_ref() as &MockCryptoAdapter).saves;
@@ -78,14 +89,14 @@ mod tests {
         });
     }
 
-    #[test]
-    fn decrypted_on_get() {
+    #[actix_web::test]
+    async fn decrypted_on_get() {
         let key = "my_key".to_owned();
         let item = StorageItem::new("hello, world".as_bytes().to_owned(), None);
         let encrypted = Cipher::encrypt(&serde_json::to_vec(&item).unwrap()).unwrap();
 
-        let mut adapter = Encrypted::new(MockCryptoAdapter { saves: vec![], gets: vec![Ok(encrypted)] });
-        let res = adapter.get_encrypted(&key);
+        let mut adapter = Encrypted::new(MockCryptoAdapter { saves: vec![], gets: vec![encrypted] });
+        let res = adapter.get_encrypted(&key).await;
         assert_eq!(true, res.is_ok());
         assert_eq!(&item, &res.unwrap());
     }

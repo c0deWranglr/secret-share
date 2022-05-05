@@ -8,10 +8,10 @@ pub struct Routes<A: StorageAdapter> {
     a: std::marker::PhantomData<A>
 }
 
-impl<A: StorageAdapter> Routes<A> {
+impl<A: StorageAdapter + Send> Routes<A> {
     pub async fn load(key: web::Path<String>, data: web::Data<SharedStorage<A>>) -> impl Responder {
         let mut storage = data.lock().unwrap();
-        let data = storage.get(&key);
+        let data = storage.get(&key).await;
         if data.is_err() { 
             println!("Exceptional load result: {:?}", data);
             HttpResponse::NotFound().body("No data found for key")
@@ -22,7 +22,8 @@ impl<A: StorageAdapter> Routes<A> {
     
     pub async fn save(req_body: web::Json<SaveBody>, data: web::Data<SharedStorage<A>>, query: web::Query<SaveQuery>) -> impl Responder {        
         let mut storage = data.lock().unwrap();
-        let key = storage.save(req_body.into_inner().value, query.attempts, Duration::from_secs(query.ttl_min*60));
+        let ttl = Duration::from_secs(query.ttl_min*60);
+        let key = storage.save(req_body.into_inner().value, query.attempts, ttl).await;
         if key.is_err() { 
             println!("Exceptional save result: {:?}", key) ;
             HttpResponse::InternalServerError().body("Error handling request")
