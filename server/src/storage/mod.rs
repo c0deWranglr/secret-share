@@ -27,28 +27,28 @@ impl<A: StorageAdapter> Storage<A> {
     }
 }
 
-impl<A: StorageAdapter + ?Sized> Storage<A> {
-    pub fn save(&mut self, value: String, allowed_attempts: Option<u32>, ttl: Duration) -> Result<String, Box<dyn Error>> {
-        let key = self.new_key()?;
-        let data = self.adapter.prepare(&key, value, ttl)?;
-        self.adapter.save_encrypted(&key, &StorageItem::new(data, allowed_attempts))?;
+impl<A: StorageAdapter + ?Sized + Send> Storage<A> {
+    pub async fn save(&mut self, value: String, allowed_attempts: Option<u32>, ttl: Duration) -> Result<String, Box<dyn Error>> {
+        let key = self.new_key().await?;
+        let data = self.adapter.prepare(&key, value, ttl).await?;
+        self.adapter.save_encrypted(&key, &StorageItem::new(data, allowed_attempts)).await?;
         Ok(key)
     }
 
-    pub fn get(&mut self, key: &String) -> Result<String, Box<dyn Error>> {
-        let mut item = self.adapter.get_encrypted(key)?;
-        self.update_access(key, &mut item)?;
-        self.adapter.extract(item.data)
+    pub async fn get(&mut self, key: &String) -> Result<String, Box<dyn Error>> {
+        let mut item = self.adapter.get_encrypted(key).await?;
+        self.update_access(key, &mut item).await?;
+        self.adapter.extract(item.data).await
     }
 
-    fn update_access(&mut self, key: &str, item: &mut StorageItem) -> Result<(), Box<dyn Error>> {
+    async fn update_access(&mut self, key: &str, item: &mut StorageItem) -> Result<(), Box<dyn Error>> {
         if let Some(max_access) = item.max_access {
             item.access_count += 1;
             if item.access_count > max_access {
-                self.adapter.delete(key)?;
+                self.adapter.delete(key).await?;
                 return Err("Access limit exceeded!".into())
             } else {
-                self.adapter.save_encrypted(key, item)?;
+                self.adapter.save_encrypted(key, item).await?;
             }
         }
         Ok(())
@@ -59,31 +59,31 @@ impl<A: StorageAdapter + ?Sized> Storage<A> {
 mod tests {
     use super::*;
 
-    struct MockAdapter {
-        ret: Vec<Result<Bytes, Box<dyn Error>>>,
+    pub struct MockAdapter {
         saves: Vec<(String, Bytes)>,
         deletes: Vec<String>
     }
 
+    #[async_trait::async_trait]
     impl StorageAdapter for MockAdapter {
-        fn prepare(&mut self, _: &str, value: String, _: Duration) -> Result<Bytes, Box<dyn Error>> { Ok(value.into_bytes()) }
+        async fn prepare(&mut self, _: &str, value: String, _: Duration) -> Result<Bytes, Box<dyn Error>> { Ok(value.into_bytes()) }
     
-        fn save(&mut self, key: &str, value: Bytes) -> Result<(), Box<dyn Error>> { self.saves.push((key.to_owned(), value)); Ok(()) }
+        async fn save(&mut self, key: &str, value: Bytes) -> Result<(), Box<dyn Error>> { self.saves.push((key.to_owned(), value)); Ok(()) }
         
-        fn get(&mut self, _: &str) -> Result<Bytes, Box<dyn Error>> { self.ret.remove(0) }
+        async fn get(&mut self, _: &str) -> Result<Bytes, Box<dyn Error>> { panic!() }
     
-        fn extract(&mut self, value: Bytes) -> Result<String, Box<dyn Error>> { Ok(String::from_utf8(value)?) }
+        async fn extract(&mut self, value: Bytes) -> Result<String, Box<dyn Error>> { Ok(String::from_utf8(value)?) }
 
-        fn delete(&mut self, key: &str) -> Result<(), Box<dyn Error>> { self.deletes.push(key.to_owned()); Ok(()) }
+        async fn delete(&mut self, key: &str) -> Result<(), Box<dyn Error>> { self.deletes.push(key.to_owned()); Ok(())}
     }
 
-    #[test]
-    fn update_item_after_access() {
+    #[actix_web::test]
+    async fn update_item_after_access() {
         let key = String::from("my_key");
         let mut item = StorageItem { data: String::from("some_value").into_bytes(), access_count: 0, max_access: Some(1) };
-        let mut storage = Storage::new(MockAdapter { ret: vec![], saves: vec![], deletes: vec![] });
+        let mut storage = Storage::new(MockAdapter { saves: vec![], deletes: vec![] });
         
-        let res = storage.update_access(&key, &mut item);
+        let res = storage.update_access(&key, &mut item).await;
         assert_eq!(true, res.is_ok());
 
         let saves = &storage.adapter.saves;
@@ -91,13 +91,13 @@ mod tests {
         assert_eq!(&key, &saves.get(0).unwrap().0);
     }
 
-    #[test]
-    fn reject_access_after_max_reached() {
+    #[actix_web::test]
+    async fn reject_access_after_max_reached() {
         let key = String::from("my_key");
         let mut item = StorageItem { data: String::from("some_value").into_bytes(), access_count: 1, max_access: Some(1) };
-        let mut storage = Storage::new(MockAdapter { ret: vec![], saves: vec![], deletes: vec![] });
+        let mut storage = Storage::new(MockAdapter { saves: vec![], deletes: vec![] });
         
-        let res = storage.update_access(&key, &mut item);
+        let res = storage.update_access(&key, &mut item).await;
         assert_eq!(false, res.is_ok());
 
         let deletes = &storage.adapter.deletes;
