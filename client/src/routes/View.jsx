@@ -76,7 +76,7 @@ export default function View(props) {
                           onButtonClick={() => {
                               const decrypted = decrypt(token, secret);
                               if (!decrypted) update({ errorMessage: 'The token you entered is incorrect. Please enter the valid token.'})
-                              else update({ token: decrypted, errorMessage: null });
+                              else update({ token: token, errorMessage: null });
                           }}>
                         <Form.Control placeholder="12345" 
                                       defaultValue={token}
