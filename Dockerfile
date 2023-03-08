@@ -1,6 +1,7 @@
 FROM debian:buster-slim
 
 RUN apt update && apt install -y openssl ca-certificates
+RUN ldconfig /usr/local/lib64/
 
 COPY docker-run.sh docker-run.sh
 COPY server/target/release/secret-share /server/secret-share
