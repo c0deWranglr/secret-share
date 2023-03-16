@@ -28,6 +28,8 @@ async fn main() -> std::io::Result<()> {
 fn serve<A: StorageAdapter + Send + 'static>(adapter: A) -> std::io::Result<Server> {
     let storage: web::Data<SharedStorage<A>> = web::Data::new(Mutex::new(Storage::new(adapter)));
 
+    let port = std::env::var("PORT").unwrap_or(String::from("8080"));
+
     let serv = HttpServer::new(move || {
         App::new()
         .wrap(actix_cors::Cors::permissive())
@@ -36,10 +38,10 @@ fn serve<A: StorageAdapter + Send + 'static>(adapter: A) -> std::io::Result<Serv
         .service(index::index)
         .service(index::static_content)
     })
-    .bind("0.0.0.0:8080")?;
+    .bind(format!("0.0.0.0:{}", port))?;
 
     if cfg!(debug_assertions) {
-        println!("Running server on http://127.0.0.1:8080");
+        println!("Running server on http://127.0.0.1:{}", port);
     } else {
         println!("Running server")
     }

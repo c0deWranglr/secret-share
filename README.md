@@ -23,6 +23,21 @@ _As of right now, expiration is done lazily. This means that the server can hold
 1. [In Memory](/server/src/storage/adapters/in_memory.rs) - Useful in a stateful environment for short lived secrets
 2. [Google Cloud Storage](/server/src/storage/adapters/google_cloud_storage.rs) - Useful in a stateless GCP environment for longer lived secrets
 
+## Running
+
+```
+make release start-docker
+```
+
+Additional Makefile rules:
+- `start-client` - Start the client in development mode
+- `start-server` - Start the server in development mode
+- `start-docker` - Start a docker container built via `release`, set `PORT` to customize the exposed docker port
+- `release-client` - Build a production version of the client
+- `release-server` - Build a production version of the server 
+- `release-docker` - Build a docker image using the release versions of the server and client
+- `release` - Run all of  the release rules
+
 ## Client-Side Encryption
 
 The most important part of this project is what happen on the client browser. Since the server is essentially an encrypting key-value store, the client is the driving force in deciding what is actually stored. 
@@ -37,6 +52,8 @@ Given a secret and a token, the following steps are undergone:
 1. Hash the token (SHA256) 100x - 100 is an arbitrary number. The purpose here is just to create a unique non reversable encryption key
 2. Encrypt the secret (AES) using the hashed token
 3. Send the output to the server along with additional request params (Expiration, Max Attempts, etc)
+
+When the encrypted secret is retrieved from the server for viewing, it requires the same token be entered for decryption.
 
 ## Screenshots
 
