@@ -42,7 +42,7 @@ impl Props {
             encryption_key: env("ENCRYPTION_KEY"),
             hcaptcha: HCaptcha {
                 site_key: env("HCAPTCHA_SITE_KEY"),
-                secret: env("HCPATCHA_SECRET")
+                secret: env("HCAPTCHA_SECRET")
             }
         }
     }    

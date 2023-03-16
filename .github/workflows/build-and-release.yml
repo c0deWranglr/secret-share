@@ -20,7 +20,7 @@ env:
 
 jobs:
   build-server:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
 
@@ -47,7 +47,7 @@ jobs:
         path: server/target/release/secret-share
 
   build-client:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
 
@@ -71,7 +71,7 @@ jobs:
 
   release:
     needs: [build-server, build-client]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: ${{ github.ref_type == 'tag' }}
     steps:
     - uses: actions/checkout@v2
